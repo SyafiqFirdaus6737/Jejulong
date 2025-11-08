@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J-MART — Demo (Had Berat 5kg)</title>
+  <style>
+    :root{
+      --green:#22c55e;
+      --green-dark:#16a34a;
+      --yellow:#eab308;
+      --bg:#ffffff;
+      --muted:#666;
+      --danger:#ef4444;
+    }
+    body{ margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#222; }
+    header{ background: linear-gradient(90deg,var(--green),var(--yellow)); color:#fff; padding:14px 16px; display:flex; align-items:center; gap:14px; box-shadow:0 3px 8px rgba(0,0,0,0.12); }
+    #logo-img { width:120px; height:auto; object-fit:contain; }
+    .title { font-size:20px; font-weight:700; }
+    .search-bar { padding:12px; background:#fefce8; border-bottom:1px solid #eee; display:flex; justify-content:center; }
+    .search-bar input{ width:90%; max-width:520px; padding:10px 12px; border-radius:10px; border:2px solid var(--green); font-size:15px; }
+    .container{ padding:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+    .product{ background:#fbfbfb; border:1px solid #eee; padding:12px; border-radius:10px; text-align:center; transition:transform .14s,box-shadow .14s; }
+    .product:hover{ transform:translateY(-4px); box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    .product img{ width:100%; height:140px; object-fit:cover; border-radius:8px; }
+    .product h4{ font-size:15px; margin:8px 0 6px; }
+    .price{ font-weight:700; margin-bottom:6px; color:var(--muted); }
+    .weight{ font-size:13px; color:#444; margin-bottom:8px; }
+    .btn{ background:var(--green); color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:600; }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    footer{ position:fixed; left:0; right:0; bottom:0; background:var(--yellow); color:#fff; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; font-weight:700; box-shadow:0 -3px 8px rgba(0,0,0,0.08); }
+    footer .left { font-size:15px; }
+    footer .right { display:flex; gap:8px; align-items:center; }
+    footer .right button{ background:var(--green-dark); padding:8px 12px; border-radius:8px; border:none; color:#fff; cursor:pointer; font-weight:700; }
+    .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); justify-content:center; align-items:center; z-index:999; }
+    .modal{ background:#fff; border-radius:12px; width:95%; max-width:520px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,0.25); }
+    .modal h3{ margin:0 0 10px; color:var(--green-dark); }
+    .row{ display:flex; gap:8px; align-items:center; margin:8px 0; }
+    label{ display:flex; gap:8px; align-items:center; cursor:pointer; }
+    .radio{ width:18px; height:18px; border-radius:50%; border:2px solid #ccc; display:inline-block; position:relative; }
+    .radio.checked{ border-color:var(--green-dark); background:linear-gradient(90deg,var(--green),var(--green-dark)); }
+    .small{ font-size:13px; color:var(--muted); }
+    .summary{ margin-top:10px; padding-top:8px; border-top:1px dashed #eee; }
+    .kv{ display:flex; justify-content:space-between; margin:6px 0; }
+    .confirm-btn{ width:100%; margin-top:10px; padding:10px; border-radius:10px; border:none; background:var(--green); color:white; font-weight:800; cursor:pointer; }
+    .confirm-btn:disabled{ opacity:.5; cursor:not-allowed; background:#9ae6b4; }
+    .close-x{ background:#eee; border-radius:6px; border:none; padding:6px 8px; cursor:pointer; }
+    .danger{ color:var(--danger); font-weight:700; }
+    .muted{ color:#666; font-size:13px; }
+    .cart-mini{ font-size:13px; color:#111; }
+    .cart-mini small{ color:var(--muted); display:block; }
+    @media (min-width:900px){ .container{ padding:28px; } header{ padding:20px 28px; } footer{ padding:14px 28px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- REPLACE LOGO URL HERE: put your hosted logo URL in src -->
+    <img id="logo-img" src="LOGO_URL_HERE" alt="J-MART Logo" onerror="showSVGLogo()" />
+    <div class="title">Jejulong Mart</div>
+  </header>
+
+  <div class="search-bar">
+    <input id="search" placeholder="Cari produk... (cth: madu, kopi, beras)" />
+  </div>
+
+  <div class="container" id="product-list"></div>
+
+  <footer>
+    <div class="left" id="cart-info">Troli: 0 item | Jumlah: RM 0.00 | Berat: 0.00 kg</div>
+    <div class="right">
+      <button id="view-cart-btn" onclick="openCheckout()">Bayar Sekarang 💳</button>
+    </div>
+  </footer>
+
+  <!-- Checkout Modal -->
+  <div class="modal-backdrop" id="checkout-modal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Checkout</h3>
+        <button class="close-x" onclick="closeCheckout()">Tutup</button>
+      </div>
+
+      <div>
+        <div class="small muted">Kaedah Penghantaran (Had dron: 5.00 kg)</div>
+        <div class="row" style="flex-direction:column; align-items:flex-start; margin-top:6px;">
+          <label onclick="selectDelivery('drone')">
+            <span class="radio" id="radio-drone"></span>
+            <div>
+              <div style="font-weight:700">Drone</div>
+              <div class="small muted">Kelajuan: 15–45 min • Caj RM10 • Had berat 5 kg</div>
+            </div>
+          </label>
+
+          <label onclick="selectDelivery('rider')">
+            <span class="radio" id="radio-rider"></span>
+            <div>
+              <div style="font-weight:700">Rider (Penghantar)</div>
+              <div class="small muted">Kelajuan: 60–90 min • Caj RM5 • Tiada had berat</div>
+            </div>
+          </label>
+
+          <label onclick="selectDelivery('pickup')">
+            <span class="radio" id="radio-pickup"></span>
+            <div>
+              <div style="font-weight:700">Ambil Sendiri (Pickup)</div>
+              <div class="small muted">Tiada caj • Ambil di kaunter</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label style="align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" id="cod-checkbox" onchange="updateSummary()" />
+            <div>
+              <div style="font-weight:700">Bayar Tunai Semasa Terima (COD)</div>
+              <div class="small muted">Caj COD: RM2 (jika dipilih)</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="small muted" style="margin-top:8px;">Ringkasan Troli & Berat</div>
+        <div style="margin-top:6px;">
+          <div id="cart-items-list" style="max-height:160px; overflow:auto; padding-right:6px;"></div>
+        </div>
+
+        <div class="summary">
+          <div class="kv"><div>Subtotal</div><div id="subtotal-txt">RM 0.00</div></div>
+          <div class="kv"><div>Jumlah Berat</div><div id="weight-txt">0.00 kg</div></div>
+          <div class="kv"><div>Caj Penghantaran</div><div id="delivery-txt">RM 0.00</div></div>
+          <div class="kv"><div>Caj COD</div><div id="cod-txt">RM 0.00</div></div>
+          <div class="kv" style="font-size:16px; font-weight:800;"><div>Jumlah Akhir</div><div id="final-txt">RM 0.00</div></div>
+          <div class="kv"><div>Anggaran Masa</div><div id="eta-txt">-</div></div>
+          <div id="overweight-msg" style="margin-top:8px; display:none; color:var(--danger); font-weight:700;">
+            Berat melebihi had 5.00 kg — Dron tidak tersedia. Sila pilih Rider atau Pickup.
+          </div>
+        </div>
+
+        <button id="confirm-pay-btn" class="confirm-btn" onclick="confirmPayment()">Sahkan & Bayar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt Modal -->
+  <div class="modal-backdrop" id="receipt-modal">
+    <div class="modal">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Resit Pesanan</h3>
+        <button class="close-x" onclick="closeReceipt()">Tutup</button>
+      </div>
+      <div class="receipt" id="receipt-content"></div>
+    </div>
+  </div>
+
+  <script>
+    function showSVGLogo(){
+      const img = document.getElementById('logo-img');
+      img.style.display='none';
+      const svg = document.createElement('div');
+      svg.innerHTML = `<svg width="140" height="40" viewBox="0 0 140 40" xmlns="http://www.w3.org/2000/svg"><rect width="140" height="40" rx="6" fill="#fff" /><text x="8" y="26" font-family="sans-serif" font-size="20" font-weight="700" fill="#111">J-</text><text x="36" y="26" font-family="sans-serif" font-size="20" font-weight="700" fill="#111">MART</text></svg>`;
+      document.querySelector('header').insertBefore(svg, document.querySelector('.title'));
+    }
+
+    const products = [
+      {id:1,name:"Madu Kelulut Asli 250g",price:19.90,weight:0.35,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=60"},
+      {id:2,name:"Sambal Ikan Bilis 200g",price:8.50,weight:0.25,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1604908177522-65f7d6fa2f37?auto=format&fit=crop&w=400&q=60"},
+      {id:3,name:"Kerepek Pisang 150g",price:5.00,weight:0.18,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1542444459-db8b9994e37b?auto=format&fit=crop&w=400&q=60"},
+      {id:4,name:"Kopi Kampung Roast 200g",price:12.00,weight:0.25,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=60"},
+      {id:5,name:"Tempoyak 250g",price:7.50,weight:0.3,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=60"},
+      {id:6,name:"Budu Tradisi 200ml",price:6.80,weight:0.4,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1598514981960-3c2b1c5063a0?auto=format&fit=crop&w=400&q=60"},
+      {id:7,name:"Keropok Ikan 200g",price:9.00,weight:0.22,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=400&q=60"},
+      {id:8,name:"Dodol Kampung 300g",price:11.50,weight:0.45,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1598188304985-5c1f799d9c9a?auto=format&fit=crop&w=400&q=60"},
+      {id:9,name:"Sambal Garing Jejulong 180g",price:10.00,weight:0.22,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1536521252554-2f8c3b0f8baf?auto=format&fit=crop&w=400&q=60"},
+      {id:10,name:"Teh Hijau Organik 100g",price:14.50,weight:0.12,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=400&q=60"},
+      {id:11,name:"Sabun Mandi 3-in-1 200g",price:4.50,weight:0.2,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1586201375759-9ff62b1f0b5d?auto=format&fit=crop&w=400&q=60"},
+      {id:12,name:"Syampu Rambut 400ml",price:9.90,weight:0.5,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1556228720-0b0b8f5f6e3b?auto=format&fit=crop&w=400&q=60"},
+      {id:13,name:"Detergen Serbuk 1kg",price:13.00,weight:1.0,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1581579180487-6b35f1c9c6b2?auto=format&fit=crop&w=400&q=60"},
+      {id:14,name:"Set Berus & Ubat Gigi",price:6.50,weight:0.15,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1588774069150-7f7e6a2a8b10?auto=format&fit=crop&w=400&q=60"},
+      {id:15,name:"Pelembap Tangan 100ml",price:7.20,weight:0.12,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1585386959984-a415522c0d72?auto=format&fit=crop&w=400&q=60"},
+      {id:16,name:"Tisu Dapur 6-roll",price:11.00,weight:0.9,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1586201375761-83865001b1c6?auto=format&fit=crop&w=400&q=60"},
+      {id:17,name:"Sapu Lantai Serbaguna",price:15.00,weight:0.8,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1581579180969-3d3f0a7a4b1b?auto=format&fit=crop&w=400&q=60"},
+      {id:18,name:"Pasta Gigi Herbal 150g",price:5.80,weight:0.2,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1588774069181-7e4d0a9a8a2f?auto=format&fit=crop&w=400&q=60"},
+      {id:19,name:"Pembersih Kaca 500ml",price:8.00,weight:0.6,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1591019155620-6f5ecb3a3fbb?auto=format&fit=crop&w=400&q=60"},
+      {id:20,name:"Topeng Muka (Pack 5)",price:4.00,weight:0.05,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?auto=format&fit=crop&w=400&q=60"},
+      {id:21,name:"Teh Tarik 20g x 10",price:7.00,weight:0.25,cat:"Minuman",image:"https://images.unsplash.com/photo-1505575967458-2766b7a9b3d8?auto=format&fit=crop&w=400&q=60"},
+      {id:22,name:"Kopi 3-in-1 20 sachet",price:9.50,weight:0.28,cat:"Minuman",image:"https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=400&q=60"},
+      {id:23,name:"Jus Oren 1L",price:6.20,weight:1.1,cat:"Minuman",image:"https://images.unsplash.com/photo-1542444459-db8b9994e37b?auto=format&fit=crop&w=400&q=60"},
+      {id:24,name:"Soda Cola 330ml x 6",price:12.00,weight:3.0,cat:"Minuman",image:"https://images.unsplash.com/photo-1526318472351-c75fcf0707f6?auto=format&fit=crop&w=400&q=60"},
+      {id:25,name:"Teh Hijau Botol 500ml",price:3.50,weight:0.6,cat:"Minuman",image:"https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=60"},
+      {id:26,name:"Kopi Latte 250ml",price:4.80,weight:0.35,cat:"Minuman",image:"https://images.unsplash.com/photo-1445077100181-ff7ff1a6b4f2?auto=format&fit=crop&w=400&q=60"},
+      {id:27,name:"Air Mineral 1.5L",price:2.50,weight:1.6,cat:"Minuman",image:"https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?auto=format&fit=crop&w=400&q=60"},
+      {id:28,name:"Susu Pekat 390g",price:4.00,weight:0.5,cat:"Minuman",image:"https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400&q=60"},
+      {id:29,name:"Air Laici Tin",price:2.20,weight:0.4,cat:"Minuman",image:"https://images.unsplash.com/photo-1542444459-db8b9994e37b?auto=format&fit=crop&w=400&q=60"},
+      {id:30,name:"Teh O Ais (Instant)",price:3.20,weight:0.22,cat:"Minuman",image:"https://images.unsplash.com/photo-1542444459-db8b9994e37b?auto=format&fit=crop&w=400&q=60"},
+      {id:31,name:"Beras Wangi 5kg",price:28.00,weight:5.00,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=400&q=60"},
+      {id:32,name:"Sayur Campur (Pack)",price:6.80,weight:0.8,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=400&q=60"},
+      {id:33,name:"Baja Organik 1kg",price:18.00,weight:1.0,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=400&q=60"},
+      {id:34,name:"Benih Terung (20 biji)",price:5.50,weight:0.05,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=400&q=60"},
+      {id:35,name:"Benih Bayam (20g)",price:3.80,weight:0.02,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1498842812179-c81beecf902c?auto=format&fit=crop&w=400&q=60"},
+      {id:36,name:"Benih Jagung (20 biji)",price:4.50,weight:0.03,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=400&q=60"},
+      {id:37,name:"Peti Baja Kompos",price:22.00,weight:6.00,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=400&q=60"},
+      {id:38,name:"Pupuk Cecair 500ml",price:12.00,weight:0.9,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=400&q=60"},
+      {id:39,name:"Alat Penyiram Mini",price:25.00,weight:1.5,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=400&q=60"},
+      {id:40,name:"Beg Tanam Sayur",price:9.90,weight:0.6,cat:"Produk Tani",image:"https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=400&q=60"},
+      {id:41,name:"Kerepek Ubi Pedas 180g",price:6.00,weight:0.18,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1542444459-db8b9994e37b?auto=format&fit=crop&w=400&q=60"},
+      {id:42,name:"Serbuk Kari 200g",price:3.80,weight:0.2,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=400&q=60"},
+      {id:43,name:"Roti Gardenia 400g",price:4.50,weight:0.4,cat:"Barang Harian",image:"https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=400&q=60"},
+      {id:44,name:"Mi Segera (Pedas) 5 pack",price:6.50,weight:0.6,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1561175444-1e9b98b0e1b9?auto=format&fit=crop&w=400&q=60"},
+      {id:45,name:"Snek Kentang BBQ",price:5.60,weight:0.2,cat:"Minuman",image:"https://images.unsplash.com/photo-1542444459-db8b9994e37b?auto=format&fit=crop&w=400&q=60"},
+      {id:46,name:"Kopi O Giling 200g",price:11.20,weight:0.25,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=60"},
+      {id:47,name:"Air Mineral Sparkling 500ml",price:3.80,weight:0.6,cat:"Minuman",image:"https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?auto=format&fit=crop&w=400&q=60"},
+      {id:48,name:"Cili Kering 200g",price:7.40,weight:0.22,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=400&q=60"},
+      {id:49,name:"Kopi 100% Arabica 250g",price:23.00,weight:0.35,cat:"Minuman",image:"https://images.unsplash.com/photo-1498804103079-a6351b050096?auto=format&fit=crop&w=400&q=60"},
+      {id:50,name:"Kuih Tradisi (Box)",price:15.00,weight:0.9,cat:"Makanan Tempatan",image:"https://images.unsplash.com/photo-1598188304985-5c1f799d9c9a?auto=format&fit=crop&w=400&q=60"}
+    ];
+
+    const DELIVERY_OPTIONS = {
+      drone: { fee: 10.00, eta: "15–45 min", label:"Drone", maxWeight: 5.00 },
+      rider: { fee: 5.00, eta: "60–90 min", label:"Rider", maxWeight: Infinity },
+      pickup: { fee: 0.00, eta: "Sedia untuk ambil", label:"Pickup", maxWeight: Infinity }
+    };
+    const COD_FEE = 2.00;
+
+    const cart = [];
+    let selectedDelivery = 'rider';
+    let codSelected = false;
+
+    const productListEl = document.getElementById('product-list');
+    const cartInfoEl = document.getElementById('cart-info');
+    const searchEl = document.getElementById('search');
+    const checkoutModal = document.getElementById('checkout-modal');
+    const receiptModal = document.getElementById('receipt-modal');
+
+    function renderProducts(list = products){
+      productListEl.innerHTML = '';
+      list.forEach(p=>{
+        const el = document.createElement('div');
+        el.className = 'product';
+        el.innerHTML = `<img src="${p.image}" alt="${escapeHtml(p.name)}" loading="lazy" /><h4>${escapeHtml(p.name)}</h4><div class="price">RM ${parseFloat(p.price).toFixed(2)}</div><div class="weight">Berat anggaran: ${parseFloat(p.weight).toFixed(2)} kg</div><button class="btn" onclick="addToCart(${p.id})">Tambah ke Troli</button>`;
+        productListEl.appendChild(el);
+      });
+    }
+
+    function addToCart(id){
+      const prod = products.find(p=>p.id===id);
+      if(prod){ cart.push(prod); updateCartInfo(); }
+    }
+    function updateCartInfo(){
+      const subtotal = cart.reduce((s,i)=>s+parseFloat(i.price),0);
+      const totalWeight = cart.reduce((s,i)=>s+parseFloat(i.weight),0);
+      cartInfoEl.innerText = `Troli: ${cart.length} item | Jumlah: RM ${subtotal.toFixed(2)} | Berat: ${totalWeight.toFixed(2)} kg`;
+    }
+
+    function openCheckout(){
+      if(cart.length===0){ alert("Troli kosong — sila tambah produk dahulu."); return; }
+      checkoutModal.style.display = 'flex';
+      selectDelivery(selectedDelivery);
+      document.getElementById('cod-checkbox').checked = codSelected;
+      updateSummary();
+      renderCartItems();
+    }
+    function closeCheckout(){ checkoutModal.style.display='none'; }
+    function selectDelivery(key){
+      selectedDelivery = key;
+      ['drone','rider','pickup'].forEach(k=>{
+        const el = document.getElementById('radio-'+k);
+        if(el) el.className = 'radio' + (k===key ? ' checked' : '');
+      });
+      updateSummary();
+    }
+    function renderCartItems(){
+      const el = document.getElementById('cart-items-list');
+      if(!el) return;
+      if(cart.length===0){ el.innerHTML = '<div class="muted">Troli kosong</div>'; return; }
+      el.innerHTML = cart.map((i, idx)=>`<div style="display:flex; justify-content:space-between; padding:6px 0;"><div style="max-width:65%"><strong>${escapeHtml(i.name)}</strong><div class="muted" style="font-size:12px">${i.cat} • ${parseFloat(i.weight).toFixed(2)} kg</div></div><div style="text-align:right;"><div>RM ${parseFloat(i.price).toFixed(2)}</div><div style="font-size:12px" class="muted">#${idx+1}</div></div></div>`).join('');
+    }
+
+    function updateSummary(){
+      const subtotal = cart.reduce((s,i)=>s+parseFloat(i.price),0);
+      const totalWeight = cart.reduce((s,i)=>s+parseFloat(i.weight),0);
+      const del = DELIVERY_OPTIONS[selectedDelivery] || DELIVERY_OPTIONS.rider;
+      codSelected = !!document.getElementById('cod-checkbox').checked;
+      const codFee = codSelected ? COD_FEE : 0;
+      const final = subtotal + del.fee + codFee;
+      document.getElementById('subtotal-txt').innerText = `RM ${subtotal.toFixed(2)}`;
+      document.getElementById('weight-txt').innerText = `${totalWeight.toFixed(2)} kg`;
+      document.getElementById('delivery-txt').innerText = `RM ${del.fee.toFixed(2)} (${del.label})`;
+      document.getElementById('cod-txt').innerText = `RM ${codFee.toFixed(2)}`;
+      document.getElementById('final-txt').innerText = `RM ${final.toFixed(2)}`;
+      document.getElementById('eta-txt').innerText = del.eta;
+      const overweightMsg = document.getElementById('overweight-msg');
+      const confirmBtn = document.getElementById('confirm-pay-btn');
+      if(totalWeight > DELIVERY_OPTIONS.drone.maxWeight && selectedDelivery === 'drone'){ overweightMsg.style.display = 'block'; confirmBtn.disabled = true; } else { overweightMsg.style.display = 'none'; confirmBtn.disabled = false; }
+      updateCartInfo();
+      renderCartItems();
+    }
+
+    function confirmPayment(){
+      if(cart.length===0){ alert("Troli kosong."); return; }
+      const subtotal = cart.reduce((s,i)=>s+parseFloat(i.price),0);
+      const totalWeight = cart.reduce((s,i)=>s+parseFloat(i.weight),0);
+      const del = DELIVERY_OPTIONS[selectedDelivery] || DELIVERY_OPTIONS.rider;
+      const codFee = codSelected ? COD_FEE : 0;
+      const final = subtotal + del.fee + codFee;
+      if(selectedDelivery === 'drone' && totalWeight > DELIVERY_OPTIONS.drone.maxWeight){ alert("Berat melebihi had 5 kg — dron tidak tersedia. Sila pilih Rider atau Pickup."); return; }
+      const itemsHtml = cart.map(i=>`<div style="display:flex;justify-content:space-between;margin:6px 0;"><div>${escapeHtml(i.name)} <span class="muted">(${i.weight.toFixed(2)} kg)</span></div><div>RM ${parseFloat(i.price).toFixed(2)}</div></div>`).join('');
+      const receiptHtml = `<div class="muted">Terima kasih! Pesanan anda telah direkodkan (Demo sahaja).</div><div style="margin-top:8px;"><strong>Kaedah Penghantaran:</strong> ${del.label} (${del.eta})</div><div style="margin-top:6px;"><strong>Bayaran Semasa Terima (COD):</strong> ${codSelected ? 'Ya' : 'Tidak'}</div><hr style="border:none;border-top:1px dashed #eee;margin:10px 0;">${itemsHtml}<hr style="border:none;border-top:1px dashed #eee;margin:10px 0;"><div class="kv"><div>Subtotal</div><div>RM ${subtotal.toFixed(2)}</div></div><div class="kv"><div>Jumlah Berat</div><div>${totalWeight.toFixed(2)} kg</div></div><div class="kv"><div>Caj Penghantaran (${del.label})</div><div>RM ${del.fee.toFixed(2)}</div></div><div class="kv"><div>Caj COD</div><div>RM ${codFee.toFixed(2)}</div></div><div class="kv" style="font-weight:800;"><div>Jumlah Akhir</div><div>RM ${final.toFixed(2)}</div></div><div style="margin-top:8px; font-size:13px;" class="muted">Nota: Ini adalah demo — tiada pemprosesan pembayaran sebenar.</div>`;
+      document.getElementById('receipt-content').innerHTML = receiptHtml;
+      cart.length = 0;
+      updateCartInfo();
+      checkoutModal.style.display = 'none';
+      receiptModal.style.display = 'flex';
+    }
+
+    function closeReceipt(){ receiptModal.style.display='none'; }
+    searchEl.addEventListener('input', (e)=>{ const t = e.target.value.toLowerCase().trim(); if(!t) renderProducts(products); else renderProducts(products.filter(p=>p.name.toLowerCase().includes(t) || (p.cat||'').toLowerCase().includes(t))); });
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]) ); }
+    renderProducts(); updateCartInfo();
+    window.addEventListener('click', (e)=>{ if(e.target === checkoutModal) checkoutModal.style.display='none'; if(e.target === receiptModal) receiptModal.style.display='none'; });
+    if(!document.getElementById('logo-img').src) showSVGLogo();
+  </script>
+</body>
+</html>
